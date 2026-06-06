@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomodoro Timer</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --work: #e74c3c;
+      --work-glow: rgba(231, 76, 60, 0.3);
+      --short-break: #2ecc71;
+      --short-break-glow: rgba(46, 204, 113, 0.3);
+      --long-break: #3498db;
+      --long-break-glow: rgba(52, 152, 219, 0.3);
+      --text: #eee;
+      --text-secondary: #999;
+      --button-bg: rgba(255, 255, 255, 0.08);
+      --button-hover: rgba(255, 255, 255, 0.15);
+      --button-active: rgba(255, 255, 255, 0.05);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 12px;
+      -webkit-app-region: drag;
+    }
+
+    /* Title Bar */
+    .title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px 6px;
+      -webkit-app-region: drag;
+    }
+
+    .title-bar__label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .title-bar__controls {
+      display: flex;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .title-bar__btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .title-bar__btn:hover {
+      opacity: 0.8;
+    }
+
+    .title-bar__btn--close {
+      background: #ff5f57;
+    }
+
+    .title-bar__btn--minimize {
+      background: #febc2e;
+    }
+
+    .title-bar__btn--pin {
+      background: #28c840;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+    }
+
+    /* Main Content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 30px 20px;
+      -webkit-app-region: no-drag;
+    }
+
+    /* Session Label */
+    .session-label {
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      color: var(--text-secondary);
+      transition: color 0.4s;
+    }
+
+    .session-label--work {
+      color: var(--work);
+    }
+
+    .session-label--short-break {
+      color: var(--short-break);
+    }
+
+    .session-label--long-break {
+      color: var(--long-break);
+    }
+
+    /* Timer Ring */
+    .timer-ring-container {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      margin-bottom: 28px;
+    }
+
+    .timer-ring {
+      transform: rotate(-90deg);
+      width: 240px;
+      height: 240px;
+    }
+
+    .timer-ring__bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-width: 8;
+    }
+
+    .timer-ring__progress {
+      fill: none;
+      stroke: var(--work);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke 0.4s, stroke-dashoffset 1s linear;
+    }
+
+    /* Timer Text */
+    .timer-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .timer-text__time {
+      font-size: 56px;
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 2px;
+      line-height: 1;
+      transition: color 0.4s;
+    }
+
+    .timer-text__time--work {
+      color: #fff;
+    }
+
+    .timer-text__time--break {
+      color: #fff;
+    }
+
+    /* Session Dots */
+    .session-dots {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .session-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      transition: all 0.3s;
+    }
+
+    .session-dot--done {
+      background: var(--work);
+      box-shadow: 0 0 6px var(--work-glow);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .btn {
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-radius: 28px;
+      padding: 12px 28px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn--primary {
+      background: var(--work);
+      color: #fff;
+      min-width: 120px;
+    }
+
+    .btn--primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn--primary:active {
+      transform: translateY(0);
+    }
+
+    .btn--ghost {
+      background: var(--button-bg);
+      color: var(--text);
+      padding: 10px 18px;
+      font-size: 12px;
+    }
+
+    .btn--ghost:hover {
+      background: var(--button-hover);
+    }
+
+    .btn--ghost:active {
+      background: var(--button-active);
+    }
+
+    /* Settings Panel */
+    .settings {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 10;
+      border-radius: 12px;
+    }
+
+    .settings--open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .settings h2 {
+      font-size: 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .settings__row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .settings__row label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      width: 80px;
+      text-align: right;
+    }
+
+    .settings__row input {
+      width: 64px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      text-align: center;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .settings__row input:focus {
+      border-color: var(--work);
+    }
+
+    .settings__row span {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .settings__close {
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <span class="title-bar__label">🍅 Pomodoro</span>
+    <div class="title-bar__controls">
+      <button class="title-bar__btn title-bar__btn--pin" id="btn-pin" title="置顶">📌</button>
+      <button class="title-bar__btn title-bar__btn--minimize" id="btn-minimize" title="最小化"></button>
+      <button class="title-bar__btn title-bar__btn--close" id="btn-close" title="关闭"></button>
+    </div>
+  </div>
+
+  <!-- Main Timer -->
+  <div class="main">
+    <div class="session-label" id="session-label">专注工作</div>
+
+    <!-- Timer Ring -->
+    <div class="timer-ring-container" id="timer-ring-container">
+      <svg class="timer-ring" viewBox="0 0 240 240">
+        <circle class="timer-ring__bg" cx="120" cy="120" r="108" />
+        <circle class="timer-ring__progress" id="timer-ring-progress" cx="120" cy="120" r="108"
+          stroke-dasharray="678.584" stroke-dashoffset="0" />
+      </svg>
+      <div class="timer-text">
+        <div class="timer-text__time timer-text__time--work" id="timer-display">25:00</div>
+      </div>
+    </div>
+
+    <!-- Session Dots -->
+    <div class="session-dots" id="session-dots">
+      <span class="session-dot"></span>
+      <span class="session-dot"></span>
+      <span class="session-dot"></span>
+      <span class="session-dot"></span>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn--ghost" id="btn-settings" title="设置">⚙️</button>
+      <button class="btn btn--primary" id="btn-start">开始</button>
+      <button class="btn btn--ghost" id="btn-skip">⏭</button>
+    </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings" id="settings-panel">
+    <h2>设置</h2>
+    <div class="settings__row">
+      <label for="setting-work">工作时长</label>
+      <input type="number" id="setting-work" min="1" max="120" value="25">
+      <span>分钟</span>
+    </div>
+    <div class="settings__row">
+      <label for="setting-short-break">短休息</label>
+      <input type="number" id="setting-short-break" min="1" max="30" value="5">
+      <span>分钟</span>
+    </div>
+    <div class="settings__row">
+      <label for="setting-long-break">长休息</label>
+      <input type="number" id="setting-long-break" min="1" max="60" value="15">
+      <span>分钟</span>
+    </div>
+    <button class="btn btn--ghost settings__close" id="btn-settings-close">关闭</button>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
