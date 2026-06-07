@@ -27,3 +27,8 @@ open pomodoro.html
 - Settings persisted to `localStorage` key `pomodoro-state`.
 - Audio uses per-note `AudioContext` instances to support iOS/Safari which aggressively tear down contexts.
 - Keyboard shortcuts: Space (start/pause), → (skip), R (reset), Esc (settings). Input focus in settings fields suppresses shortcuts.
+
+## Additional instruction
+
+-当你需要对前端视觉进行修改的时候去参考品牌视觉规范文件里的内容
+-当你要写产品文字的时候，参考语言规范文件里的内容
